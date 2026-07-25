@@ -1,0 +1,12 @@
+# source audio — copyrighted, never commit
+refs/
+
+# derived data (stems, midi, cells) — regenerable, derived from copyrighted audio
+work/
+
+# larsnet clone + CC BY-NC weights — separate repo, non-commercial license
+larsnet/
+
+.venv/
+__pycache__/
+*.pyc
