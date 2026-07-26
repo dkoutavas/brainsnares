@@ -1,12 +1,30 @@
-# source audio — copyrighted, never commit
+# Source audio — copyrighted reference records. Never commit, never distribute.
 refs/
 
-# derived data (stems, midi, cells) — regenerable, derived from copyrighted audio
+# Derived data: stems, transcriptions, parts, cells, sheets. All regenerable
+# from refs/ via run_pipeline.sh, and all derived from copyrighted audio.
 work/
 
-# larsnet clone + CC BY-NC weights — separate repo, non-commercial license
+# LarsNet clone + its pretrained weights (CC BY-NC 4.0, non-commercial).
+# Fetched separately; contains a local patch to larsnet.py (soundfile loader).
 larsnet/
 
+# Python
 .venv/
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Stray media/scratch at repo root (test renders, dumps)
+/*.mid
+/*.wav
+/*.flac
+/*.mp3
+/*.json
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store

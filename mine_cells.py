@@ -10,7 +10,7 @@ These are CANDIDATES: the author's ear curates, then imports keepers with
 drumgen's own tool:
 
     cd ~/dev/drumgen
-    python midi_reader.py ~/dev/drumtool/work/cells/ --auto-tag
+    python midi_reader.py ~/dev/brainsnares/work/cells/<cell>.mid --name <name> --auto-tag
 
 Pure counting + consensus, deterministic. No inference.
 
@@ -128,8 +128,10 @@ def main():
         print(f"  {stem[:56]:56s} {len(figs)} cells "
               f"(top recurs {figs[0][1]}x)" if figs else f"  {stem[:56]:56s} none recur")
     print(f"\n{total} cell candidates -> {args.outdir}/")
-    print("import keepers:  cd ~/dev/drumgen && python midi_reader.py "
-          f"{os.path.abspath(args.outdir)}/ --auto-tag")
+    # per-file with an explicit --name: bulk directory import takes no --name,
+    # yielding doubled "_<bpm>bpm_<bpm>bpm" names and no provenance tags
+    print("import keepers (per file):  cd ~/dev/drumgen && python midi_reader.py "
+          f"{os.path.abspath(args.outdir)}/<cell>.mid --name <name> --auto-tag")
 
 
 if __name__ == "__main__":
