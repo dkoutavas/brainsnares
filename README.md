@@ -24,15 +24,35 @@ Treat the output as raw material. The ear decides what survives, and a figure
 worth keeping gets hand-authored into drumgen's library rather than shipped
 from here.
 
-## Status (2026-07-26)
+## Status (2026-10-12): parked, working
 
-Working and ear-verified. 11 reference tracks processed (Kidcrash *Snacks* x7,
-Lord Snow x3, Ruined Families x1), producing 51 cell candidates, of which 49
-imported into drumgen. The other two were correctly rejected by drumgen's
-validator as pure-cymbal patterns.
+Working and ear-verified as of July 2026. 11 reference tracks processed
+(Kidcrash *Snacks* x7, Lord Snow x3, Ruined Families x1), producing 51 cell
+candidates, of which 49 imported into drumgen. The other two were correctly
+rejected by drumgen's validator as pure-cymbal patterns.
 
 Toms, crash-riding, and overall density came out well. Kick and snare
 interplay is the weakest part, and cymbal voicing is approximate.
+
+Parked in October 2026 because nothing downstream was pulling on it: no track
+in progress needed drums, and this tool only earns its keep when one does.
+That is sequencing, not a verdict on the tool. Tests are green in CI, the docs
+match the code, and the open question (kick/snare interplay) is written down
+rather than half-fixed.
+
+### Resuming
+
+1. `./selftest.sh` on `.venv`. If green, the install still works. If
+   `librosa` or `numpy` moved, this is where it shows.
+2. Drop the new reference audio into `refs/`, then `./run_pipeline.sh` and
+   `./mine_all.sh`. Both skip finished work.
+3. Audition `work/sheets/*__sheet.mid` in headphones before anything else.
+   The ear is the gate; do not reopen the code until something sounds wrong,
+   and then follow the method below (name the bar, measure the window).
+4. Import keepers one file at a time, per the CLAUDE.md section on drumgen.
+
+The first thing worth improving when it comes back is kick and snare
+interplay. Start from the ear, not from the thresholds.
 
 ## The pipeline
 

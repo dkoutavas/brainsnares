@@ -16,6 +16,11 @@ constraint is inherited from drumgen's stated beliefs rather than being a
 preference about style. Expect this to stay an internal tool for drumgen's
 library-building phase.
 
+Parked since October 2026, working and tested. The README's "Status" section
+says why and how to resume. A plugin or DAW integration was considered and
+set aside: the friction is upstream (no song needing drums), not in the
+tooling, and LarsNet's CC BY-NC weights rule out distributing one anyway.
+
 ## Commands
 
 ```bash
