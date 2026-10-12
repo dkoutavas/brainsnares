@@ -46,8 +46,9 @@ refs/*.flac
   → drumgen             per-file import, see CLAUDE.md
 ```
 
-Everything runs on `.venv/bin/python` (3.11, CUDA torch). Every script has a
-`--selftest`.
+Everything runs on `.venv/bin/python` (3.11, CUDA torch). `./mine_all.sh`
+runs the interpret and mine steps over every separated track. Every script
+has a `--selftest`, and `./selftest.sh` runs them all.
 
 ## Setup
 
@@ -79,12 +80,17 @@ x = torch.from_numpy(_np.ascontiguousarray(_data.T))   # (channels, samples)
 Then drop reference audio into `refs/` and run `./run_pipeline.sh`.
 
 The selftests assert real behaviour rather than imports. They check that bleed
-is dropped while genuine simultaneous hits survive, that consensus repairs a
+is dropped while genuine simultaneous hits survive, that the velocity map and
+tempo-map export land where the parameters say, that consensus repairs a
 noisy bar, and that cells land on the grid. Use them to verify the install:
 
 ```sh
-for s in transcribe interpret mine_cells contact_sheet; do .venv/bin/python $s.py --selftest; done
+./selftest.sh
 ```
+
+The same runner is CI, on a CPU-only dependency set (`requirements-selftest.txt`).
+It never runs separation, so a green CI says the arithmetic after demucs and
+LarsNet still holds, nothing more.
 
 ## What was hard
 

@@ -39,25 +39,34 @@ $PY interpret.py ... --no-consensus        # skip riff repair, for A/B diagnosis
 $PY mine_cells.py "work/bars/*.json" -o work/cells
 $PY contact_sheet.py "work/bars/*.json" -o work/sheets
 
-# Every script self-tests
-$PY transcribe.py --selftest && $PY interpret.py --selftest \
-  && $PY mine_cells.py --selftest && $PY contact_sheet.py --selftest
+# 3 + 4 over every separated track. Resumable; FORCE=1 re-interprets all.
+./mine_all.sh
+
+# Every script self-tests. The runner covers all eight, legacy ones included.
+./selftest.sh
+$PY transcribe.py --selftest        # or one at a time
 ```
 
-Batch steps 3 and 4 over every track with a shell loop over
-`work/larsnet_all/kick/*.wav`. Git history has the exact loop.
+CI (`.github/workflows/selftest.yml`) runs `./selftest.sh` on every push with
+`requirements-selftest.txt`, a CPU-only subset with no torch, demucs or
+LarsNet. Separation is never exercised by tests; only the arithmetic after it.
 
 ## Architecture
 
 | file | role |
 |---|---|
 | `run_pipeline.sh` | demucs then larsnet, per track, resumable |
+| `mine_all.sh` | interpret every track, then mine cells and sheets, resumable |
+| `selftest.sh` | runs every script's `--selftest`, used by CI |
 | `transcribe.py` | stems to notes: detection, arbitration, velocity, tempo, MIDI |
 | `interpret.py` | notes to part: crash gate, riding, quantize, bar consensus |
 | `mine_cells.py` | bars to recurring figures to one-bar cell `.mid`s |
 | `contact_sheet.py` | cells to one audition clip per track, with markers |
 | `humanize_stats.py` | feel measurement, superseded (see README failures) |
 | `audio2drums.py`, `stems2midi.py`, `cells_from_transcription.py` | earlier approaches, kept as the record of what did not work |
+
+The superseded scripts say so in their docstrings and still self-test, so a
+dependency change that breaks them shows up in CI rather than silently.
 
 Data lives under `work/`, all of it gitignored and regenerable: `drumstems/`,
 `larsnet_all/<drum>/`, `parts/`, `bars/`, `cells/`, `sheets/`.
@@ -145,7 +154,9 @@ the figure carried more of the original song.
   the parameter.
 - Every non-trivial script keeps one runnable `--selftest` asserting the
   behaviour that matters, such as bleed being dropped while genuine doubles
-  survive.
+  survive. A rule written into this file or the README should have an
+  assertion behind it; the arbitration, velocity, tempo-map, crash gate,
+  riding, quantize and consensus rules all do.
 - Deliberate shortcuts get a `ponytail:` comment naming the ceiling and the
   upgrade path.
 - Never commit `refs/`, `work/`, or `larsnet/`. Those hold copyrighted audio,

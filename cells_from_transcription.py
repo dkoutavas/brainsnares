@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """Mine repeated 1-bar drum figures out of a transcription.
 
+SUPERSEDED by interpret.py + mine_cells.py. Mining raw, unquantized
+transcription found zero exact recurrence across 52 bars; only quantize plus
+bar consensus made figures countable (README, "What failed"). Kept as the
+record.
+
 Input:  a transcribed .mid (absolute times, messy) + the drums stem it came
         from (used for beat tracking, which is far more reliable on audio).
 Output: the most-REPEATED quantized bar patterns, each written as its own

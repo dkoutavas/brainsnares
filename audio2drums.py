@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Drum transcriber: drums stem (wav) -> MIDI.
 
+SUPERSEDED. Band classification without stem separation cannot tell snare
+from cymbals in a distorted mix (README, "What failed"). Kept as the record.
+The live pipeline is transcribe.py -> interpret.py -> mine_cells.py.
+
 Per-band spectral flux. Each drum voice gets its own frequency band and its
 own independent onset detection, so simultaneous hits (kick UNDER a crash —
 constant in blast beats) all register. The earlier one-window-one-label
@@ -82,12 +86,8 @@ def transcribe(y, sr, sensitivity=0.5):
 
     hits.sort(key=lambda h: h[0])
     onset_env = librosa.onset.onset_strength(y=y, sr=sr, hop_length=HOP)
-    try:
-        tempo = float(librosa.feature.rhythm.tempo(
-            onset_envelope=onset_env, sr=sr, hop_length=HOP)[0])
-    except AttributeError:  # older librosa
-        tempo = float(librosa.beat.tempo(
-            onset_envelope=onset_env, sr=sr, hop_length=HOP)[0])
+    tempo_fn = getattr(librosa.feature, "tempo", None) or librosa.beat.tempo
+    tempo = float(tempo_fn(onset_envelope=onset_env, sr=sr, hop_length=HOP)[0])
     return hits, tempo
 
 

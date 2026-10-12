@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """Measure human feel from real recordings, for drumgen's humanizer constants.
 
+SUPERSEDED. On this material the beat grid is unreliable (alignment 0.78
+where 1.0 is random), so the timing statistics are contaminated. Do not derive
+drumgen's TIMING_TENDENCIES from this output. Velocity ordering survived but
+mix compression confounds it; treat it as a hint. See README, "What failed".
+
 Reads LarsNet per-drum stems, detects onsets on each, snaps them to a beat
 grid, and reports how far off the grid real drummers actually play and how
 much their velocities vary. Those are exactly the numbers hand-tuned in

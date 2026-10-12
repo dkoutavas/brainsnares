@@ -30,7 +30,7 @@ import numpy as np
 
 from transcribe import (
     transcribe, write_tempo_map_midi,
-    N_CRASH, N_RIDE,
+    N_KICK, N_SNARE, N_CRASH, N_RIDE,
 )
 
 GRID = 4            # sixteenths per beat
@@ -202,8 +202,9 @@ def selftest():
         f"expected 1 strongest crash, got {[(c['t'], c['vel']) for c in crashes]}"
     assert any(e["note"] == 36 for e in g), "kick must pass through"
 
-    # riding: 8 crashes at exact 8th spacing (169bpm) must be relabeled ride
-    # and ALL survive the gate; 3 scattered crashes still gate down to accents
+    # riding: 8 crashes at exact 8th spacing (169bpm) are flagged as riding,
+    # keep their crash label, and ALL survive the gate; 3 scattered crashes
+    # still gate down to the accent
     beat = 60.0 / 169
     ev2 = [{"t": 50.0 + i * beat / 2, "note": N_CRASH, "vel": 100} for i in range(8)]
     ev2 += [{"t": 80.0, "note": N_CRASH, "vel": 90},
@@ -216,6 +217,19 @@ def selftest():
     assert n_r == 8 and len(ridden) == 8, f"riding run must survive whole, got {len(ridden)}"
     assert all(e["note"] == N_CRASH for e in ridden), "riding keeps its crash label"
     assert len(lone) == 1 and lone[0]["vel"] == 90, "scattered crashes still gate"
+
+    # quantize: two kicks 10 ms apart land in one sixteenth slot and collapse
+    # to the louder; a snare 70 ms after the beat at 120 bpm rounds to the "e"
+    beats = np.arange(16) * 0.5
+    q = quantize([{"t": 2.0, "note": N_KICK, "vel": 80},
+                  {"t": 2.01, "note": N_KICK, "vel": 100},
+                  {"t": 2.07, "note": N_SNARE, "vel": 90}], beats)
+    kicks = [e for e in q if e["note"] == N_KICK]
+    assert len(kicks) == 1 and kicks[0]["vel"] == 100 and kicks[0]["bp"] == 4.0, \
+        f"same-slot duplicates must collapse to the loudest, got {kicks}"
+    snare = [e for e in q if e["note"] == N_SNARE][0]
+    assert snare["bp"] == 4.25 and abs(snare["t"] - 2.125) < 1e-9, \
+        f"snare must snap to the sixteenth after beat 4, got {snare}"
 
     # consensus: 4 near-identical bars, one missing a hit + one phantom.
     # Figure is realistically dense (8 hits): one error must not push the
@@ -234,8 +248,8 @@ def selftest():
     figs = {b: frozenset(f.keys()) for b, f in bars.items()}
     assert figs[2] == figs[0], "noisy bar must snap to the consensus figure"
     assert snapped == 1 and restored >= 1
-    print(f"OK — crash gate + consensus snap ({snapped} bar repaired, "
-          f"{restored} hit restored)")
+    print(f"OK — crash gate, riding, quantize, consensus snap ({snapped} bar "
+          f"repaired, {restored} hit restored)")
 
 
 # ── main ─────────────────────────────────────────────────────────────────────

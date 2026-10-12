@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """LarsNet stems -> MIDI, v2. Parameters measured from the actual material
-(see workflow stem2midi-deep-dive): arbitration thresholds, velocity anchors,
+(README, "What was hard"): arbitration thresholds, velocity anchors,
 tom/cymbal split rules, and tempo handling all come from measurement on the
 Kidcrash / Lord Snow / Ruined Families stems, not guesses.
 
@@ -261,6 +261,15 @@ def split_hihat(events, y, sr):
             e["note"] = N_HAT_OPEN
 
 
+# ── velocity ─────────────────────────────────────────────────────────────────
+
+def velocity_from_peak(p_db, p95_db, slope):
+    """Peak dB -> MIDI velocity, anchored so the stem's p95 peak lands on 120.
+    Slope per stem (3.0 snare, 2.5 kick/toms, 2.0 cymbals) keeps ghost/accent
+    bimodality across ~40 dB of snare range. Skews accent-heavy by design."""
+    return int(np.clip(round(120 + slope * (p_db - p95_db)), 30, 127))
+
+
 # ── tempo + export ───────────────────────────────────────────────────────────
 
 def track_tempo(stems, sr):
@@ -290,6 +299,9 @@ def track_tempo(stems, sr):
         return a[0], a[1]
     b = run(120)
     cands = [c for c in (a, b) if c]
+    if not cands:
+        raise SystemExit("tempo: fewer than 8 beats found on the summed stems; "
+                         "is this a whole track?")
     best = min(cands, key=lambda c: c[2])
     return best[0], best[1]
 
@@ -392,7 +404,7 @@ def transcribe(stem_dir, name, sensitivity=0.5):
         p95 = float(np.percentile([e["p_db"] for e in se], 95))
         slope = STEM_CFG[stem][1]
         for e in se:
-            e["vel"] = int(np.clip(round(120 + slope * (e["p_db"] - p95)), 30, 127))
+            e["vel"] = velocity_from_peak(e["p_db"], p95, slope)
 
     # base notes, then refinements
     base = {"kick": N_KICK, "snare": N_SNARE, "toms": N_TOM_RACK,
@@ -427,12 +439,59 @@ def selftest():
     ev.append({"t": 200.0, "stem": "snare", "e_db": -15.0, "p_db": -8})
     ev.append({"t": 200.01, "stem": "hihat", "e_db": -36.0, "p_db": -30})
 
+    # 12 solo cymbal hits at ~ -20 dB build the cymbals reference
+    for i in range(12):
+        ev.append({"t": 300.0 + i * 0.5, "stem": "cymbals", "e_db": -20.0, "p_db": -12})
+    # one cymbal stroke LarsNet split across both stems, each within 9 dB of
+    # its own reference: keep only the one closer to its reference (hihat)
+    ev.append({"t": 400.0, "stem": "hihat", "e_db": -36.0, "p_db": -30})
+    ev.append({"t": 400.01, "stem": "cymbals", "e_db": -24.0, "p_db": -16})
+
     out = arbitrate(ev)
     at100 = [e["stem"] for e in out if abs(e["t"] - 100.0) < 0.05]
     at200 = [e["stem"] for e in out if abs(e["t"] - 200.0) < 0.05]
+    at400 = [e["stem"] for e in out if abs(e["t"] - 400.0) < 0.05]
     assert at100 == ["snare"], f"bleed must be dropped, got {at100}"
     assert sorted(at200) == ["hihat", "snare"], f"genuine double must survive, got {at200}"
-    print("OK — bleed dropped, genuine double kept")
+    assert at400 == ["hihat"], f"hihat+cymbals split stroke must collapse to one, got {at400}"
+
+    # velocity: p95 peak -> 120, 10 dB under on snare -> 90, floor and ceiling clip
+    assert velocity_from_peak(-8.0, -8.0, 3.0) == 120
+    assert velocity_from_peak(-18.0, -8.0, 3.0) == 90
+    assert velocity_from_peak(-60.0, -8.0, 3.0) == 30, "ghosts floor at 30"
+    assert velocity_from_peak(0.0, -8.0, 3.0) == 127, "ceiling at 127"
+
+    # tempo-map export: a hit on beat 3 at a steady 120 bpm lands at tick 3*PPQ,
+    # one set_tempo per beat interval, and --tighten pulls a 10 ms-late hit
+    # halfway back to the sixteenth
+    import tempfile
+    import mido
+    beats = np.arange(16) * 0.5
+    hits = [{"t": 1.5, "note": N_KICK, "vel": 100},
+            {"t": 1.5 + 0.010, "note": N_SNARE, "vel": 100}]
+
+    def on_ticks(path):
+        t, out = 0, {}
+        for m in mido.MidiFile(path).tracks[0]:
+            t += m.time
+            if m.type == "note_on":
+                out[m.note] = t
+            elif m.type == "set_tempo":
+                out.setdefault("tempos", []).append(m.tempo)
+        return out
+
+    with tempfile.TemporaryDirectory() as d:
+        p = os.path.join(d, "t.mid")
+        write_tempo_map_midi(hits, beats, 120.0, p)
+        got = on_ticks(p)
+        assert got[N_KICK] == 3 * 480, f"beat 3 must be tick 1440, got {got[N_KICK]}"
+        assert got[N_SNARE] == 1450, f"10 ms late at 120 bpm = 3.02 beats, got {got[N_SNARE]}"
+        assert len(got["tempos"]) == len(beats) - 1 and set(got["tempos"]) == {500000}
+        write_tempo_map_midi(hits, beats, 120.0, p, tighten=True)
+        assert on_ticks(p)[N_SNARE] == 1445, "tighten snaps halfway to the sixteenth"
+
+    print("OK — bleed dropped, genuine double kept, split cymbal collapsed, "
+          "velocity map and tempo-map export verified")
 
 
 def main():

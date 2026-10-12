@@ -116,7 +116,7 @@ def main():
     total = 0
     for path in sorted(files):
         bars, bpm = load_bars(path)
-        # short slug: first + last word of the track name
+        # short slug: first two words + last word of the track name
         stem = os.path.basename(path).replace(".json", "")
         words = stem.split("_")
         slug = "_".join(words[:2] + words[-1:]) if len(words) > 3 else stem

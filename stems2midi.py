@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Transcribe LarsNet's 5 isolated drum stems into one MIDI file.
 
+SUPERSEDED by transcribe.py, which adds cross-stem arbitration (this script
+fires every stem's detector on one physical hit: 2.31 notes per hit), dB
+velocity, voice splitting and a tempo map. Kept as the record.
+
 Each stem contains ONE drum, so there is no classification step and no
 band-overlap problem: detect onsets on the kick stem, those are kicks.
 This is what the earlier band-splitting heuristic could not do — in a
@@ -125,12 +129,8 @@ def main():
             ref = os.path.join(args.stem_dir, "kick", args.name)
         y, sr = librosa.load(ref, sr=None, mono=True)
         env = librosa.onset.onset_strength(y=y, sr=sr, hop_length=HOP)
-        try:
-            tempo = float(librosa.feature.rhythm.tempo(
-                onset_envelope=env, sr=sr, hop_length=HOP)[0])
-        except AttributeError:
-            tempo = float(librosa.beat.tempo(
-                onset_envelope=env, sr=sr, hop_length=HOP)[0])
+        tempo_fn = getattr(librosa.feature, "tempo", None) or librosa.beat.tempo
+        tempo = float(tempo_fn(onset_envelope=env, sr=sr, hop_length=HOP)[0])
 
     write_midi(hits, tempo, args.out)
     counts = {}
